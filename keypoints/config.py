@@ -4,20 +4,20 @@ from pathlib import Path
 import torch
 
 
-def config(args=None):
+def config(args=None, parser=None):
     """
     Reads the command switches and creates a config
     Command line switches override config files
     :return:
     """
-
     """ config """
-    parser = argparse.ArgumentParser(description='load_yaml_file')
-    parser.add_argument('-d', '--device', type=str)
+    if parser is None:
+        parser = argparse.ArgumentParser(description='load_yaml_file')
+    parser.add_argument('--device', type=str)
     parser.add_argument('-r', '--run_id', type=int, default=-1)
     parser.add_argument('--comment', type=str)
     parser.add_argument('--demo', action='store_true', default=False)
-    parser.add_argument('-l', '--load', type=str, default=None)
+    parser.add_argument('--load', type=str, default=None)
     parser.add_argument('--transfer_load', type=str, default=None)
     parser.add_argument('--checkpoint_freq', type=int)
     parser.add_argument('--data_root', type=str, default='data')
@@ -25,7 +25,6 @@ def config(args=None):
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--processes', type=int)
     parser.add_argument('--seed', type=int, default=None)
-
     """cma params"""
     parser.add_argument('--cma_algo', type=str)
     parser.add_argument('--cma_step_mode', type=str)
@@ -33,31 +32,24 @@ def config(args=None):
     parser.add_argument('--cma_initial_step_size', type=float, default=None)
     parser.add_argument('--cma_samples', type=int, default=None)
     parser.add_argument('--cma_oversample', type=int)
-
     """ visualization params """
     parser.add_argument('--display', action='store_true')
     parser.add_argument('--display_freq', type=int)
     parser.add_argument('--display_kp_rows', type=int)
-
     """ model parameters """
     parser.add_argument('--opt_level', type=str)
     parser.add_argument('--model_type', type=str)
     parser.add_argument('--model_in_channels', type=int)
     parser.add_argument('--model_keypoints', type=int)
     parser.add_argument('--transporter_combine_mode', type=str)
-
     """ policy parameters """
     parser.add_argument('--policy_action_select_mode', type=str)
     parser.add_argument('--policy_depth', type=int)
-
     """ gym env parameters """
     parser.add_argument('--gym_reward_count_limit', type=int, default=None)
-
     """ hyper-parameters """
     parser.add_argument('--optimizer', type=str, default='Adam')
     parser.add_argument('--batch_size', type=int)
-    parser.add_argument('--lr', type=float)
-
     """ data and data augmentation parameters """
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--dataset_train_len', type=int)
@@ -88,15 +80,12 @@ def config(args=None):
         'opt_level': 'O0',
         'display_kp_rows': 4,
         'display_freq': 5000,
-
         'transporter_combine_mode': 'max',
-
         'processes': 7,
         'cma_algo;': 'fast',
         'cma_step_mode': 'auto',
         'cma_step_decay': 0.001,
         'cma_oversample': 0,
-
         'policy_action_select_mode': 'argmax',
         'policy_depth': 1
     }
@@ -104,7 +93,8 @@ def config(args=None):
     args = set_if_not_set(args, defaults)
 
     if args.device is None:
-        args.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        args.device = torch.device(
+            'cuda:0' if torch.cuda.is_available() else 'cpu')
     else:
         args.device = torch.device(args.device)
 

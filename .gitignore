@@ -3,3 +3,5 @@
 /tests/test.log
 /data/
 /tests/keypoints.log
+.run_id
+__pycache__

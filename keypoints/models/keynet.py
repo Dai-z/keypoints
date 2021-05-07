@@ -1,6 +1,6 @@
 import torch
-from keypoints.models import knn
-from keypoints import models as vgg
+from . import knn
+from . import vgg
 
 
 class KeyNet(knn.Container):
@@ -48,7 +48,7 @@ class KeyNet(knn.Container):
 
 
 def make(args):
-    nonlinearity, kwargs = nn.LeakyReLU, {"inplace": True}
+    nonlinearity, kwargs = torch.nn.LeakyReLU, {"inplace": True}
     encoder_core = vgg.make_layers(vgg.vgg_cfg[args.model_type], nonlinearity=nonlinearity, nonlinearity_kwargs=kwargs)
     encoder = knn.Unit(args.model_in_channels, args.model_z_channels, encoder_core)
     decoder_core = vgg.make_layers(vgg.decoder_cfg[args.model_type])

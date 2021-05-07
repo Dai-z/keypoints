@@ -3,12 +3,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch.optim import Adam
 
-from data_augments import TpsAndRotate, nop
+from keypoints.data_augments import TpsAndRotate, nop
 from keypoints.models import keynet
-from utils import ResultsLogger
-from apex import amp
+# from keypoints.utils import ResultsLogger
+# from apex import amp
 from keypoints.ds import datasets as ds
-from config import config
+from keypoints.config import config
 
 
 if __name__ == '__main__':
@@ -18,14 +18,14 @@ if __name__ == '__main__':
     run_dir = f'data/models/keypoints/{args.model_type}/run_{args.run_id}'
 
     """ logging """
-    display = ResultsLogger(run_dir=run_dir,
-                            num_keypoints=args.model_keypoints,
-                            title='Results',
-                            visuals=args.display,
-                            image_capture_freq=args.display_freq,
-                            kp_rows=args.display_kp_rows,
-                            comment=args.comment)
-    display.header(args)
+    # display = ResultsLogger(run_dir=run_dir,
+    #                         num_keypoints=args.model_keypoints,
+    #                         title='Results',
+    #                         visuals=args.display,
+    #                         image_capture_freq=args.display_freq,
+    #                         kp_rows=args.display_kp_rows,
+    #                         comment=args.comment)
+    # display.header(args)
 
     """ dataset """
     datapack = ds.datasets[args.dataset]
@@ -47,8 +47,8 @@ if __name__ == '__main__':
     optim = Adam(kp_network.parameters(), lr=1e-4)
 
     """ apex mixed precision """
-    if args.device != 'cpu':
-        model, optimizer = amp.initialize(kp_network, optim, opt_level=args.opt_level)
+    # if args.device != 'cpu':
+    #     model, optimizer = amp.initialize(kp_network, optim, opt_level=args.opt_level)
 
     """ loss function """
     def l2_reconstruction_loss(x, x_, loss_mask=None):
@@ -76,17 +76,17 @@ if __name__ == '__main__':
 
                 loss = criterion(x_t, x_, loss_mask)
 
-                if args.device != 'cpu':
-                    with amp.scale_loss(loss, optim) as scaled_loss:
-                        scaled_loss.backward()
-                else:
-                    loss.backward()
+                # if args.device != 'cpu':
+                #     with amp.scale_loss(loss, optim) as scaled_loss:
+                #         scaled_loss.backward()
+                # else:
+                loss.backward()
                 optim.step()
 
                 if i % args.checkpoint_freq == 0:
                     kp_network.save(run_dir + '/checkpoint')
 
-                display.log(batch, epoch, i, loss, optim, x, x_, x_t, heatmap, k, m, p, loss_mask, type='train', depth=20)
+                # display.log(batch, epoch, i, loss, optim, x, x_, x_t, heatmap, k, m, p, loss_mask, type='train', depth=20)
 
         """ test  """
         with torch.no_grad():
@@ -98,9 +98,9 @@ if __name__ == '__main__':
                 x_t, z, k, m, p, heatmap = kp_network(x, x_)
                 loss = criterion(x_t, x_, loss_mask)
 
-                display.log(batch, epoch, i, loss, optim, x, x_, x_t, heatmap, k, m, p, loss_mask, type='test', depth=20)
+                # display.log(batch, epoch, i, loss, optim, x, x_, x_t, heatmap, k, m, p, loss_mask, type='test', depth=20)
 
-            ave_loss, best_loss = display.end_epoch(epoch, optim)
+            # ave_loss, best_loss = display.end_epoch(epoch, optim)
 
             """ save if model improved """
             if ave_loss <= best_loss and not args.demo:

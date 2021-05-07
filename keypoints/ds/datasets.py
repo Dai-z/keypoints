@@ -15,7 +15,7 @@ import skimage.measure
 from tqdm import tqdm
 from random import randint
 
-import cma_es
+# import cma_es
 from keypoints import models as MF
 
 Pos = collections.namedtuple('Pos', 'x, y')
