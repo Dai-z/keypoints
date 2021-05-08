@@ -4,10 +4,8 @@ from . import vgg
 
 
 class KeyNet(knn.Container):
-    def __init__(self, encoder,
-                 keypoint, key2map,
-                 decoder,
-                 init_weights=True):
+
+    def __init__(self, encoder, keypoint, key2map, decoder, init_weights=True):
         super().__init__()
         self.encoder = encoder
         self.keypoint = keypoint
@@ -38,8 +36,14 @@ class KeyNet(knn.Container):
     def load_from_autoencoder(self, directory):
         self._initialize_weights()
         self.encoder.load(directory + '/encoder', out_block=False)
-        self.keypoint.load(directory + '/encoder', in_block=True, core=True, out_block=False)
-        self.decoder.load(directory + '/decoder', in_block=False, core=True, out_block=True)
+        self.keypoint.load(directory + '/encoder',
+                           in_block=True,
+                           core=True,
+                           out_block=False)
+        self.decoder.load(directory + '/decoder',
+                          in_block=False,
+                          core=True,
+                          out_block=True)
 
     def save(self, directory):
         self.encoder.save(directory + '/encoder')
@@ -47,20 +51,59 @@ class KeyNet(knn.Container):
         self.decoder.save(directory + '/decoder')
 
 
-def make(args):
-    nonlinearity, kwargs = torch.nn.LeakyReLU, {"inplace": True}
-    encoder_core = vgg.make_layers(vgg.vgg_cfg[args.model_type], nonlinearity=nonlinearity, nonlinearity_kwargs=kwargs)
-    encoder = knn.Unit(args.model_in_channels, args.model_z_channels, encoder_core)
-    decoder_core = vgg.make_layers(vgg.decoder_cfg[args.model_type])
-    decoder = knn.Unit(args.model_z_channels + args.model_keypoints, args.model_in_channels, decoder_core)
-    keypoint_core = vgg.make_layers(vgg.vgg_cfg[args.model_type], nonlinearity=nonlinearity, nonlinearity_kwargs=kwargs)
-    keypoint = knn.Unit(args.model_in_channels, args.model_keypoints, keypoint_core)
-    keymapper = knn.GaussianLike(sigma=0.1)
-    kp_network = KeyNet(encoder, keypoint, keymapper, decoder, init_weights=True)
+class KeyPointNet(knn.Container):
+    """Key Point Net. Forward to get ONLY point.
+    """
 
-    if args.load is not None:
+    def __init__(self, keypoint, init_weights=True):
+        super().__init__()
+        self.keypoint = keypoint
+        self.ssm = knn.SpatialLogSoftmax()
+
+        if init_weights:
+            self._initialize_weights()
+
+    def forward(self, x):
+        heatmap = self.keypoint(x)
+        kps = self.ssm(heatmap, probs=False)
+
+        return kps
+
+    def load(self, directory):
+        self.keypoint.load(directory + '/keypoint')
+
+    def save(self, directory):
+        self.keypoint.save(directory + '/keypoint')
+
+
+def make(args, kp_only=False):
+    nonlinearity, kwargs = torch.nn.LeakyReLU, {"inplace": True}
+    encoder_core = vgg.make_layers(vgg.vgg_cfg[args.model_type],
+                                   nonlinearity=nonlinearity,
+                                   nonlinearity_kwargs=kwargs)
+    encoder = knn.Unit(args.model_in_channels, args.model_z_channels,
+                       encoder_core)
+    decoder_core = vgg.make_layers(vgg.decoder_cfg[args.model_type])
+    decoder = knn.Unit(args.model_z_channels + args.model_keypoints,
+                       args.model_in_channels, decoder_core)
+    keypoint_core = vgg.make_layers(vgg.vgg_cfg[args.model_type],
+                                    nonlinearity=nonlinearity,
+                                    nonlinearity_kwargs=kwargs)
+    keypoint = knn.Unit(args.model_in_channels, args.model_keypoints,
+                        keypoint_core)
+    keymapper = knn.GaussianLike(sigma=0.1)
+    if kp_only:
+        kp_network = KeyPointNet(keypoint, init_weights=True)
+    else:
+        kp_network = KeyNet(encoder,
+                            keypoint,
+                            keymapper,
+                            decoder,
+                            init_weights=True)
+
+    if hasattr(args, 'load') and args.load is not None:
         kp_network.load(args.load)
-    if args.transfer_load is not None:
+    if hasattr(args, 'transfer_load') and args.transfer_load is not None:
         kp_network.load_from_autoencoder(args.transfer_load)
 
     return kp_network
