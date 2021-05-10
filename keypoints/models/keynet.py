@@ -63,8 +63,12 @@ class KeyPointNet(knn.Container):
         if init_weights:
             self._initialize_weights()
 
-    def forward(self, x):
+    def forward(self, x, mask=None):
         heatmap = self.keypoint(x)
+        if mask is not None:
+            mask = mask.detach().to(torch.float)
+            mask[mask == 0] = -100
+            heatmap = mask.detach() * heatmap
         kps = self.ssm(heatmap, probs=False)
 
         return kps
