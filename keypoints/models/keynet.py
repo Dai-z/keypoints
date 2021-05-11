@@ -66,9 +66,9 @@ class KeyPointNet(knn.Container):
     def forward(self, x, mask=None):
         heatmap = self.keypoint(x)
         if mask is not None:
-            mask = mask.detach().to(torch.float)
-            mask[mask == 0] = -100
-            heatmap = mask.detach() * heatmap
+            mask = mask.to(torch.float)
+            mask[mask == 0] = -10
+            heatmap = mask.detach() + heatmap
         kps = self.ssm(heatmap, probs=False)
 
         return kps
